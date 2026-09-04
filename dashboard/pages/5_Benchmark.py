@@ -50,7 +50,6 @@ st.set_page_config(
 CSS_PATH = Path(__file__).resolve().parent / "5_Benchmark.css"
 
 if CSS_PATH.exists():
-
     st.html(
         f"<style>{CSS_PATH.read_text(encoding='utf-8')}</style>"
     )
@@ -65,46 +64,27 @@ def html(content):
 
 
 def safe_float(value, default=0.0):
-
     try:
         return float(value)
-
-    except (
-        TypeError,
-        ValueError,
-    ):
+    except (TypeError, ValueError):
         return float(default)
 
 
 def safe_int(value, default=0):
-
     try:
         return int(value)
-
-    except (
-        TypeError,
-        ValueError,
-    ):
+    except (TypeError, ValueError):
         return int(default)
 
 
-def format_number(
-    value,
-    decimals=2,
-):
-
+def format_number(value, decimals=2):
     try:
         return f"{float(value):,.{decimals}f}"
-
-    except (
-        TypeError,
-        ValueError,
-    ):
+    except (TypeError, ValueError):
         return "—"
 
 
 def format_seconds(value):
-
     value = safe_float(value)
 
     if value < 1:
@@ -120,33 +100,19 @@ def format_seconds(value):
 
 
 def extract_history(result):
-
-    if not isinstance(
-        result,
-        dict,
-    ):
+    if not isinstance(result, dict):
         return []
 
-    history = result.get(
-        "history",
-        [],
-    )
+    history = result.get("history", [])
 
-    if not isinstance(
-        history,
-        list,
-    ):
+    if not isinstance(history, list):
         return []
 
     values = []
 
     for item in history:
 
-        if isinstance(
-            item,
-            dict,
-        ):
-
+        if isinstance(item, dict):
             item = item.get(
                 "fitness",
                 item.get(
@@ -156,30 +122,57 @@ def extract_history(result):
             )
 
         try:
-
-            values.append(
-                float(item)
-            )
-
-        except (
-            TypeError,
-            ValueError,
-        ):
-
+            values.append(float(item))
+        except (TypeError, ValueError):
             continue
 
     return values
 
 
 def get_result_fitness(result):
+    if not isinstance(result, dict):
+        return float("inf")
 
-    return safe_float(
-        result.get(
-            "fitness",
-            float("inf"),
-        ),
+    value = result.get(
+        "fitness",
         float("inf"),
     )
+
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float("inf")
+
+
+def result_is_valid(result):
+    if not isinstance(result, dict):
+        return False
+
+    if result.get("error"):
+        return False
+
+    fitness = result.get("fitness")
+
+    if fitness is None:
+        return False
+
+    try:
+        return bool(result.get("valid", True))
+    except Exception:
+        return False
+
+
+def result_status(result):
+    if not isinstance(result, dict):
+        return "❌ Failed"
+
+    if result.get("error"):
+        return "⚠️ Failed"
+
+    if result_is_valid(result):
+        return "✓ Valid"
+
+    return "⚠️ Invalid"
 
 
 # ============================================================
@@ -364,9 +357,7 @@ with col2:
             500,
         ],
         index=2,
-        format_func=lambda x: (
-            f"{x} nodes"
-        ),
+        format_func=lambda x: f"{x} nodes",
     )
 
 
@@ -566,7 +557,6 @@ with st.expander(
             int(vehicles),
         )
 
-
         if max_clusters >= 2:
 
             clusters = st.slider(
@@ -619,6 +609,40 @@ html(
 
 
 # ============================================================
+# SELECTED CONFIGURATION SUMMARY
+# ============================================================
+
+html(
+    f"""
+    <div class="benchmark-info">
+
+        <div class="benchmark-info-icon">
+            🎯
+        </div>
+
+        <div>
+
+            <strong>
+                Selected Experiment
+            </strong>
+
+            <div>
+                {scenario} traffic ·
+                {network_size} nodes ·
+                {customers} customers ·
+                {vehicles} vehicles ·
+                {clusters} clusters ·
+                seed {seed}
+            </div>
+
+        </div>
+
+    </div>
+    """
+)
+
+
+# ============================================================
 # RUN BUTTON
 # ============================================================
 
@@ -645,9 +669,7 @@ with run_col2:
 
 if run_benchmark:
 
-    progress = st.progress(
-        0
-    )
+    progress = st.progress(0)
 
     status = st.empty()
 
@@ -655,50 +677,102 @@ if run_benchmark:
     try:
 
         status.markdown(
+            "### 🔍 Validating selected configuration..."
+        )
+
+        # ----------------------------------------------------
+        # IMPORTANT:
+        # Do NOT change the user's selected values here.
+        #
+        # We only perform a basic sanity check.
+        # The authoritative VRP capacity validation remains
+        # inside optimizer_service.py / VRPProblem.
+        # ----------------------------------------------------
+
+        if int(customers) <= 0:
+
+            progress.empty()
+            status.empty()
+
+            st.error(
+                "Invalid configuration: "
+                "number of customers must be greater than zero."
+            )
+
+            st.stop()
+
+
+        if int(vehicles) <= 0:
+
+            progress.empty()
+            status.empty()
+
+            st.error(
+                "Invalid configuration: "
+                "number of vehicles must be greater than zero."
+            )
+
+            st.stop()
+
+
+        if int(clusters) > int(customers):
+
+            progress.empty()
+            status.empty()
+
+            st.error(
+                "Invalid configuration: "
+                "number of clusters cannot exceed "
+                "the number of customers."
+            )
+
+            st.stop()
+
+
+        if int(clusters) > int(vehicles):
+
+            progress.empty()
+            status.empty()
+
+            st.error(
+                "Invalid configuration: "
+                "number of clusters cannot exceed "
+                "the number of vehicles."
+            )
+
+            st.stop()
+
+
+        # ----------------------------------------------------
+        # RUN
+        # ----------------------------------------------------
+
+        status.markdown(
             "### ⚡ Running all four algorithms..."
         )
 
 
-        benchmark_start = (
-            time.perf_counter()
-        )
+        benchmark_start = time.perf_counter()
 
 
         results = run_algorithm_comparison(
-
             scenario=scenario,
 
-            customers=int(
-                customers
-            ),
+            customers=int(customers),
 
-            vehicles=int(
-                vehicles
-            ),
+            vehicles=int(vehicles),
 
-            network_size=int(
-                network_size
-            ),
+            network_size=int(network_size),
 
-            edges_per_node=int(
-                edges_per_node
-            ),
+            edges_per_node=int(edges_per_node),
 
-            particles=int(
-                particles
-            ),
+            particles=int(particles),
 
-            iterations=int(
-                iterations
-            ),
+            iterations=int(iterations),
 
-            clusters=int(
-                clusters
-            ),
+            clusters=int(clusters),
 
-            seed=int(
-                seed
-            ),
+            seed=int(seed),
         )
 
 
@@ -708,10 +782,7 @@ if run_benchmark:
         )
 
 
-        progress.progress(
-            1.0
-        )
-
+        progress.progress(1.0)
 
         status.empty()
 
@@ -727,9 +798,54 @@ if run_benchmark:
             )
 
 
+        # ----------------------------------------------------
+        # NORMALIZE RESULT ERRORS
+        #
+        # The backend may return an exception as an error
+        # result. Keep it instead of crashing the whole page.
+        # ----------------------------------------------------
+
+        normalized_results = {}
+
+
+        for algorithm, result in results.items():
+
+            if isinstance(
+                result,
+                dict,
+            ):
+
+                normalized_results[
+                    algorithm
+                ] = result
+
+            else:
+
+                normalized_results[
+                    algorithm
+                ] = {
+                    "algorithm": algorithm,
+                    "valid": False,
+                    "fitness": None,
+                    "travel_time": None,
+                    "distance": None,
+                    "congestion": None,
+                    "execution_time": None,
+                    "history": [],
+                    "error": (
+                        "Algorithm did not return "
+                        "a valid result."
+                    ),
+                }
+
+
+        # ----------------------------------------------------
+        # SAVE RESULTS
+        # ----------------------------------------------------
+
         st.session_state[
             "benchmark_results"
-        ] = results
+        ] = normalized_results
 
 
         st.session_state[
@@ -738,59 +854,120 @@ if run_benchmark:
 
             "scenario": scenario,
 
-            "customers": int(
-                customers
-            ),
+            "customers": int(customers),
 
-            "vehicles": int(
-                vehicles
-            ),
+            "vehicles": int(vehicles),
 
-            "network_size": int(
-                network_size
-            ),
+            "network_size": int(network_size),
 
-            "edges_per_node": int(
-                edges_per_node
-            ),
+            "edges_per_node": int(edges_per_node),
 
-            "particles": int(
-                particles
-            ),
+            "particles": int(particles),
 
-            "iterations": int(
-                iterations
-            ),
+            "iterations": int(iterations),
 
-            "clusters": int(
-                clusters
-            ),
+            "clusters": int(clusters),
 
-            "seed": int(
-                seed
-            ),
+            "seed": int(seed),
 
-            "benchmark_runtime": (
-                benchmark_runtime
-            ),
+            "benchmark_runtime":
+                benchmark_runtime,
         }
 
 
-        st.success(
-            "Benchmark completed successfully."
+        successful_count = sum(
+            1
+            for result in normalized_results.values()
+            if result_is_valid(result)
         )
+
+
+        failed_count = (
+            len(normalized_results)
+            - successful_count
+        )
+
+
+        if successful_count == 0:
+
+            st.error(
+                "No algorithm produced a valid "
+                "benchmark solution."
+            )
+
+            for algorithm, result in (
+                normalized_results.items()
+            ):
+
+                if result.get("error"):
+
+                    st.warning(
+                        f"{algorithm}: "
+                        f"{result['error']}"
+                    )
+
+        elif failed_count > 0:
+
+            st.warning(
+                f"Benchmark completed with "
+                f"{successful_count} successful algorithm(s) "
+                f"and {failed_count} failed algorithm(s)."
+            )
+
+        else:
+
+            st.success(
+                "Benchmark completed successfully."
+            )
 
 
     except Exception as error:
 
         progress.empty()
+
         status.empty()
 
-        st.error(
-            f"Benchmark failed: {error}"
-        )
 
-        st.stop()
+        # ----------------------------------------------------
+        # IMPORTANT:
+        # Do not hide the actual backend error.
+        # ----------------------------------------------------
+
+        error_text = str(error)
+
+
+        if (
+            "capacity" in error_text.lower()
+            or "demand" in error_text.lower()
+        ):
+
+            st.error(
+                "⚠️ Selected VRP configuration is "
+                "capacity-infeasible."
+            )
+
+            st.info(
+                f"Backend message: {error_text}"
+            )
+
+            st.markdown(
+                """
+                **Your selected values were not changed.**
+
+                The benchmark uses exactly the number of
+                customers and vehicles you selected.
+
+                To run this particular configuration,
+                the fleet must have enough capacity for the
+                total customer demand.
+                """
+            )
+
+        else:
+
+            st.error(
+                f"Benchmark failed: {error_text}"
+            )
 
 
 # ============================================================
@@ -821,8 +998,8 @@ if not benchmark_results:
             </div>
 
             <div class="ready-text">
-                Configure the experiment from the
-                sidebar and run the benchmark to compare
+                Configure the experiment and run
+                the benchmark to compare
                 Q-ROUTE optimization algorithms.
             </div>
 
@@ -849,59 +1026,74 @@ for algorithm, result in benchmark_results.items():
         continue
 
 
+    fitness = result.get(
+        "fitness",
+        None,
+    )
+
+    travel_time = result.get(
+        "travel_time",
+        None,
+    )
+
+    distance = result.get(
+        "distance",
+        None,
+    )
+
+    congestion = result.get(
+        "congestion",
+        None,
+    )
+
+    execution_time = result.get(
+        "execution_time",
+        None,
+    )
+
+
     rows.append(
         {
             "Algorithm": algorithm,
 
-            "Fitness": safe_float(
-                result.get(
-                    "fitness",
-                    0,
-                )
+            "Status": result_status(result),
+
+            "Fitness": (
+                safe_float(fitness)
+                if fitness is not None
+                else None
             ),
 
-            "Travel Time": safe_float(
-                result.get(
-                    "travel_time",
-                    0,
-                )
+            "Travel Time": (
+                safe_float(travel_time)
+                if travel_time is not None
+                else None
             ),
 
-            "Distance": safe_float(
-                result.get(
-                    "distance",
-                    0,
-                )
+            "Distance": (
+                safe_float(distance)
+                if distance is not None
+                else None
             ),
 
             "Congestion (%)": (
-                safe_float(
-                    result.get(
-                        "congestion",
-                        0,
-                    )
-                )
-                * 100
+                safe_float(congestion) * 100
+                if congestion is not None
+                else None
             ),
 
-            "Runtime (s)": safe_float(
-                result.get(
-                    "execution_time",
-                    0,
-                )
+            "Runtime (s)": (
+                safe_float(execution_time)
+                if execution_time is not None
+                else None
             ),
 
-            "Valid": result.get(
-                "valid",
-                False,
-            ),
+            "Valid": result_is_valid(result),
         }
     )
 
 
-benchmark_df = pd.DataFrame(
-    rows
-)
+benchmark_df = pd.DataFrame(rows)
 
 
 # ============================================================
@@ -931,30 +1123,27 @@ valid_df = benchmark_df[
 ].copy()
 
 
-if valid_df.empty:
-
-    valid_df = benchmark_df[
-        benchmark_df["Fitness"].notna()
-    ].copy()
-
-
 if not valid_df.empty:
 
     best_fitness = valid_df.loc[
         valid_df["Fitness"].idxmin()
     ]
 
+
     best_time = valid_df.loc[
         valid_df["Travel Time"].idxmin()
     ]
+
 
     best_distance = valid_df.loc[
         valid_df["Distance"].idxmin()
     ]
 
+
     best_congestion = valid_df.loc[
         valid_df["Congestion (%)"].idxmin()
     ]
+
 
     fastest = valid_df.loc[
         valid_df["Runtime (s)"].idxmin()
@@ -1006,8 +1195,47 @@ if not valid_df.empty:
             "⚡ Fastest",
             fastest["Algorithm"],
             format_seconds(
-                fastest["Runtime (s)"]
+                fastest["Runtime (s)"
+                ]
             ),
+        )
+
+
+else:
+
+    st.warning(
+        "No valid algorithm result is available "
+        "to determine a winner."
+    )
+
+
+# ============================================================
+# FAILED ALGORITHMS
+# ============================================================
+
+failed_results = [
+    (
+        algorithm,
+        result,
+    )
+    for algorithm, result in benchmark_results.items()
+    if isinstance(result, dict)
+    and result.get("error")
+]
+
+
+if failed_results:
+
+    st.markdown(
+        "### ⚠️ Algorithm Status"
+    )
+
+
+    for algorithm, result in failed_results:
+
+        st.warning(
+            f"**{algorithm}** could not produce a valid "
+            f"solution: {result.get('error')}"
         )
 
 
@@ -1070,7 +1298,11 @@ table_df["Congestion (%)"] = table_df[
 table_df["Runtime (s)"] = table_df[
     "Runtime (s)"
 ].map(
-    lambda x: f"{x:.3f}"
+    lambda x: (
+        f"{x:.3f}"
+        if pd.notna(x)
+        else "—"
+    )
 )
 
 
@@ -1093,252 +1325,265 @@ st.dataframe(
 
 
 # ============================================================
+# VALID RESULTS FOR CHARTS
+# ============================================================
+
+chart_df = benchmark_df[
+    benchmark_df["Valid"] == True
+].copy()
+
+
+# ============================================================
 # FITNESS COMPARISON
 # ============================================================
 
-st.markdown(
-    "### 🎯 Fitness Comparison"
-)
+if not chart_df.empty:
 
-
-fitness_fig = go.Figure()
-
-
-fitness_fig.add_trace(
-    go.Bar(
-        x=benchmark_df[
-            "Algorithm"
-        ],
-
-        y=benchmark_df[
-            "Fitness"
-        ],
-
-        text=[
-            f"{x:.2f}"
-            for x in benchmark_df[
-                "Fitness"
-            ]
-        ],
-
-        textposition="auto",
-
-        name="Fitness",
+    st.markdown(
+        "### 🎯 Fitness Comparison"
     )
-)
 
 
-fitness_fig.update_layout(
-
-    title=(
-        "Solution Quality by Algorithm"
-    ),
-
-    xaxis_title="Algorithm",
-
-    yaxis_title=(
-        "Fitness — Lower is Better"
-    ),
-
-    template="plotly_white",
-
-    height=450,
-
-    margin=dict(
-        l=50,
-        r=30,
-        t=70,
-        b=80,
-    ),
-)
+    fitness_fig = go.Figure()
 
 
-st.plotly_chart(
-    fitness_fig,
-    width="stretch",
-)
+    fitness_fig.add_trace(
+        go.Bar(
+            x=chart_df[
+                "Algorithm"
+            ],
+
+            y=chart_df[
+                "Fitness"
+            ],
+
+            text=[
+                f"{x:.2f}"
+                for x in chart_df[
+                    "Fitness"
+                ]
+            ],
+
+            textposition="auto",
+
+            name="Fitness",
+        )
+    )
+
+
+    fitness_fig.update_layout(
+        title=(
+            "Solution Quality by Algorithm"
+        ),
+
+        xaxis_title="Algorithm",
+
+        yaxis_title=(
+            "Fitness — Lower is Better"
+        ),
+
+        template="plotly_white",
+
+        height=450,
+
+        margin=dict(
+            l=50,
+            r=30,
+            t=70,
+            b=80,
+        ),
+    )
+
+
+    st.plotly_chart(
+        fitness_fig,
+        width="stretch",
+    )
 
 
 # ============================================================
 # TRAVEL TIME AND DISTANCE
 # ============================================================
 
-st.markdown(
-    "### 🛣️ Travel Cost Comparison"
-)
+if not chart_df.empty:
 
-
-cost_fig = go.Figure()
-
-
-cost_fig.add_trace(
-    go.Bar(
-        x=benchmark_df[
-            "Algorithm"
-        ],
-
-        y=benchmark_df[
-            "Travel Time"
-        ],
-
-        name="Travel Time",
+    st.markdown(
+        "### 🛣️ Travel Cost Comparison"
     )
-)
 
 
-cost_fig.add_trace(
-    go.Bar(
-        x=benchmark_df[
-            "Algorithm"
-        ],
+    cost_fig = go.Figure()
 
-        y=benchmark_df[
-            "Distance"
-        ],
 
-        name="Distance",
+    cost_fig.add_trace(
+        go.Bar(
+            x=chart_df[
+                "Algorithm"
+            ],
+
+            y=chart_df[
+                "Travel Time"
+            ],
+
+            name="Travel Time",
+        )
     )
-)
 
 
-cost_fig.update_layout(
+    cost_fig.add_trace(
+        go.Bar(
+            x=chart_df[
+                "Algorithm"
+            ],
 
-    title=(
-        "Travel Time vs Distance"
-    ),
+            y=chart_df[
+                "Distance"
+            ],
 
-    xaxis_title="Algorithm",
-
-    yaxis_title="Cost",
-
-    barmode="group",
-
-    template="plotly_white",
-
-    height=450,
-)
+            name="Distance",
+        )
+    )
 
 
-st.plotly_chart(
-    cost_fig,
-    width="stretch",
-)
+    cost_fig.update_layout(
+        title=(
+            "Travel Time vs Distance"
+        ),
+
+        xaxis_title="Algorithm",
+
+        yaxis_title="Cost",
+
+        barmode="group",
+
+        template="plotly_white",
+
+        height=450,
+    )
+
+
+    st.plotly_chart(
+        cost_fig,
+        width="stretch",
+    )
 
 
 # ============================================================
 # CONGESTION
 # ============================================================
 
-st.markdown(
-    "### 🚦 Congestion Comparison"
-)
+if not chart_df.empty:
 
-
-congestion_fig = go.Figure()
-
-
-congestion_fig.add_trace(
-    go.Bar(
-        x=benchmark_df[
-            "Algorithm"
-        ],
-
-        y=benchmark_df[
-            "Congestion (%)"
-        ],
-
-        text=[
-            f"{x:.1f}%"
-            for x in benchmark_df[
-                "Congestion (%)"
-            ]
-        ],
-
-        textposition="auto",
-
-        name="Congestion",
+    st.markdown(
+        "### 🚦 Congestion Comparison"
     )
-)
 
 
-congestion_fig.update_layout(
-
-    title=(
-        "Average Route Congestion"
-    ),
-
-    xaxis_title="Algorithm",
-
-    yaxis_title="Congestion (%)",
-
-    template="plotly_white",
-
-    height=420,
-)
+    congestion_fig = go.Figure()
 
 
-st.plotly_chart(
-    congestion_fig,
-    width="stretch",
-)
+    congestion_fig.add_trace(
+        go.Bar(
+            x=chart_df[
+                "Algorithm"
+            ],
+
+            y=chart_df[
+                "Congestion (%)"
+            ],
+
+            text=[
+                f"{x:.1f}%"
+                for x in chart_df[
+                    "Congestion (%)"
+                ]
+            ],
+
+            textposition="auto",
+
+            name="Congestion",
+        )
+    )
+
+
+    congestion_fig.update_layout(
+        title=(
+            "Average Route Congestion"
+        ),
+
+        xaxis_title="Algorithm",
+
+        yaxis_title="Congestion (%)",
+
+        template="plotly_white",
+
+        height=420,
+    )
+
+
+    st.plotly_chart(
+        congestion_fig,
+        width="stretch",
+    )
 
 
 # ============================================================
 # RUNTIME
 # ============================================================
 
-st.markdown(
-    "### ⚡ Execution Time"
-)
+if not chart_df.empty:
 
-
-runtime_fig = go.Figure()
-
-
-runtime_fig.add_trace(
-    go.Bar(
-        x=benchmark_df[
-            "Algorithm"
-        ],
-
-        y=benchmark_df[
-            "Runtime (s)"
-        ],
-
-        text=[
-            f"{x:.3f}s"
-            for x in benchmark_df[
-                "Runtime (s)"
-            ]
-        ],
-
-        textposition="auto",
-
-        name="Runtime",
+    st.markdown(
+        "### ⚡ Execution Time"
     )
-)
 
 
-runtime_fig.update_layout(
-
-    title=(
-        "Optimization Execution Time"
-    ),
-
-    xaxis_title="Algorithm",
-
-    yaxis_title="Runtime (seconds)",
-
-    template="plotly_white",
-
-    height=420,
-)
+    runtime_fig = go.Figure()
 
 
-st.plotly_chart(
-    runtime_fig,
-    width="stretch",
-)
+    runtime_fig.add_trace(
+        go.Bar(
+            x=chart_df[
+                "Algorithm"
+            ],
+
+            y=chart_df[
+                "Runtime (s)"
+            ],
+
+            text=[
+                f"{x:.3f}s"
+                for x in chart_df[
+                    "Runtime (s)"
+                ]
+            ],
+
+            textposition="auto",
+
+            name="Runtime",
+        )
+    )
+
+
+    runtime_fig.update_layout(
+        title=(
+            "Optimization Execution Time"
+        ),
+
+        xaxis_title="Algorithm",
+
+        yaxis_title="Runtime (seconds)",
+
+        template="plotly_white",
+
+        height=420,
+    )
+
+
+    st.plotly_chart(
+        runtime_fig,
+        width="stretch",
+    )
 
 
 # ============================================================
@@ -1351,7 +1596,6 @@ st.markdown(
 
 
 convergence_fig = go.Figure()
-
 
 has_history = False
 
@@ -1366,7 +1610,6 @@ for algorithm, result in (
 
 
     if not history:
-
         continue
 
 
@@ -1421,6 +1664,7 @@ if has_history:
         width="stretch",
     )
 
+
 else:
 
     st.info(
@@ -1453,20 +1697,20 @@ for algorithm, result in (
         f"⚙️ {algorithm}"
     ):
 
-        if result.get(
-            "error"
-        ):
+        if result.get("error"):
 
             st.error(
                 result["error"]
             )
 
+            st.write(
+                "**Status:** ⚠️ Failed"
+            )
+
             continue
 
 
-        d1, d2, d3, d4 = st.columns(
-            4
-        )
+        d1, d2, d3, d4 = st.columns(4)
 
 
         with d1:
@@ -1476,7 +1720,7 @@ for algorithm, result in (
                 format_number(
                     result.get(
                         "fitness",
-                        0,
+                        None,
                     ),
                     4,
                 ),
@@ -1490,7 +1734,7 @@ for algorithm, result in (
                 format_number(
                     result.get(
                         "travel_time",
-                        0,
+                        None,
                     )
                 ),
             )
@@ -1503,7 +1747,7 @@ for algorithm, result in (
                 format_number(
                     result.get(
                         "distance",
-                        0,
+                        None,
                     )
                 ),
             )
@@ -1511,11 +1755,25 @@ for algorithm, result in (
 
         with d4:
 
+            congestion = result.get(
+                "congestion",
+                None,
+            )
+
+            if congestion is None:
+
+                congestion_text = "—"
+
+            else:
+
+                congestion_text = (
+                    f"{safe_float(congestion) * 100:.2f}%"
+                )
+
+
             st.metric(
                 "Congestion",
-                (
-                    f"{safe_float(result.get('congestion', 0)) * 100:.2f}%"
-                ),
+                congestion_text,
             )
 
 
@@ -1531,15 +1789,8 @@ for algorithm, result in (
 
 
         st.write(
-            "**Valid:**",
-            (
-                "✓ Yes"
-                if result.get(
-                    "valid",
-                    False,
-                )
-                else "✗ No"
-            ),
+            "**Status:**",
+            result_status(result),
         )
 
 
@@ -1558,6 +1809,7 @@ for algorithm, result in (
                 ),
             )
 
+
             st.write(
                 "**Warm-start iterations:**",
                 result.get(
@@ -1566,6 +1818,7 @@ for algorithm, result in (
                 ),
             )
 
+
             st.write(
                 "**Warm-start particles:**",
                 result.get(
@@ -1573,6 +1826,7 @@ for algorithm, result in (
                     "—",
                 ),
             )
+
 
             st.write(
                 "**Repair improvement:**",
@@ -1601,9 +1855,7 @@ config = st.session_state.get(
 )
 
 
-e1, e2, e3, e4 = st.columns(
-    4
-)
+e1, e2, e3, e4 = st.columns(4)
 
 
 with e1:
@@ -1647,9 +1899,7 @@ with e4:
     )
 
 
-e5, e6, e7, e8 = st.columns(
-    4
-)
+e5, e6, e7, e8 = st.columns(4)
 
 
 with e5:
@@ -1709,14 +1959,12 @@ html(
         </div>
 
         <div class="fair-text">
-
             The benchmark compares algorithms on the
             same generated transportation network,
             traffic scenario and VRP configuration.
             Fitness is minimized, so a lower value
             represents a better solution under the
             configured multi-objective cost function.
-
         </div>
 
     </div>
@@ -1743,9 +1991,13 @@ csv_data = export_df.to_csv(
 
 st.download_button(
     label="⬇️ Download Benchmark CSV",
+
     data=csv_data,
+
     file_name="qroute_benchmark.csv",
+
     mime="text/csv",
+
     width="stretch",
 )
 
@@ -1757,9 +2009,7 @@ st.download_button(
 st.markdown("---")
 
 
-n1, n2 = st.columns(
-    2
-)
+n1, n2 = st.columns(2)
 
 
 with n1:
@@ -1768,6 +2018,16 @@ with n1:
         "⚛️ Run Another Benchmark",
         width="stretch",
     ):
+
+        st.session_state.pop(
+            "benchmark_results",
+            None,
+        )
+
+        st.session_state.pop(
+            "benchmark_configuration",
+            None,
+        )
 
         st.rerun()
 
