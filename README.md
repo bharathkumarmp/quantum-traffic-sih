@@ -122,6 +122,7 @@ Instead of treating routing as a fixed shortest-path problem, Q-ROUTE considers 
            Fitness          Runtime        Convergence
 
 
+#
 # Quantum-Inspired Intelligent Traffic Route Optimization in Transportation Systems Using Metaheuristic Optimization
 
 <p align="center">
