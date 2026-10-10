@@ -2,129 +2,6 @@
 
 ## Quantum-Inspired Intelligent Traffic Route Optimization in Transportation Systems Using Metaheuristic Optimization
 
-> A traffic-aware, multi-vehicle route optimization framework combining Vehicle Routing, PSO, QPSO, Warm-QPSO, decomposition, global boundary repair, and systematic algorithm benchmarking.
-
----
-
-## 📌 Overview
-
-**Q-ROUTE** is a traffic-aware multi-vehicle routing and optimization platform designed to solve **large-scale Vehicle Routing Problems (VRPs)** under changing traffic conditions.
-
-The system models a transportation network as a **weighted graph**, where roads contain information such as:
-
-- Distance
-- Travel time
-- Congestion
-- Road availability
-
-The routing problem considers:
-
-- Multiple vehicles
-- Multiple customers
-- Customer demand
-- Vehicle capacity
-- Traffic conditions
-- Road incidents
-- Road blockages
-
-The system searches for high-quality fleet-wide routing solutions using classical, quantum-inspired, and hybrid metaheuristic optimization techniques.
-
-### Core Optimization Approaches
-
-- **Dijkstra** — shortest-path baseline
-- **PSO** — Particle Swarm Optimization
-- **QPSO** — Quantum Particle Swarm Optimization
-- **Warm-QPSO** — PSO warm-started QPSO
-- **Decomposed Warm-QPSO** — scalable hybrid framework
-- **Global Boundary Repair** — post-merge route improvement
-
-The project also includes a **benchmarking framework** for comparing algorithms under identical experimental conditions.
-
----
-
-# 🎯 Problem Statement
-
-Urban transportation networks face several challenges:
-
-- Traffic congestion
-- Inefficient fleet routing
-- Increasing delivery demand
-- Road incidents
-- Road blockages
-- Vehicle capacity constraints
-- Large routing search spaces
-- Dynamic travel times
-
-For a fleet with many vehicles and customers, the number of possible routing combinations grows extremely quickly.
-
-Checking every possible solution is computationally impractical for large instances.
-
-Therefore, Q-ROUTE investigates **metaheuristic and quantum-inspired optimization techniques** for finding high-quality solutions within practical computational limits.
-
----
-
-# 💡 Core Idea
-
-The central idea of Q-ROUTE is:
-
-> **Traffic changes → road weights change → routing costs change → the optimization problem changes → the fleet can be re-optimized.**
-
-Instead of treating routing as a fixed shortest-path problem, Q-ROUTE considers the **entire fleet**, its customers, vehicle capacities, and current transportation conditions.
-
----
-
-# 🏗️ System Architecture
-
-```text
-                    ┌─────────────────────┐
-                    │   Traffic Inputs    │
-                    │ Customers / Vehicles│
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │  Weighted Road      │
-                    │      Graph          │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │    VRP Modeling     │
-                    │ Demand + Capacity   │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │   Fitness Function  │
-                    │ Time + Distance +   │
-                    │ Congestion + Penalty│
-                    └──────────┬──────────┘
-                               │
-              ┌────────────────┼────────────────┐
-              │                │                │
-              ▼                ▼                ▼
-           PSO              QPSO          Warm-QPSO
-              │                │                │
-              └────────────────┼────────────────┘
-                               │
-                               ▼
-                   Decomposed Warm-QPSO
-                               │
-                               ▼
-                    Global Boundary Repair
-                               │
-                               ▼
-                     Final Fleet Routes
-                               │
-                               ▼
-              ┌────────────────┼────────────────┐
-              ▼                ▼                ▼
-           Fitness          Runtime        Convergence
-
-
-#
-# Quantum-Inspired Intelligent Traffic Route Optimization in Transportation Systems Using Metaheuristic Optimization
-
 <p align="center">
 
 **A Traffic-Aware Multi-Vehicle Routing and Optimization Framework**
@@ -170,7 +47,7 @@ Instead of treating routing as a fixed shortest-path problem, Q-ROUTE considers 
 - [Benchmarking Framework](#-benchmarking-framework)
 - [Experimental Methodology](#-experimental-methodology)
 - [Evaluation Metrics](#-evaluation-metrics)
-- [Preliminary Results](#-preliminary-results)
+- [Results](#-results)
 - [Validation](#-validation)
 - [Convergence Analysis](#-convergence-analysis)
 - [Scalability Analysis](#-scalability-analysis)
@@ -209,7 +86,7 @@ Each road contains information such as:
 - Distance
 - Travel time
 - Congestion
-- Availability
+- Road availability
 - Blockage status
 
 The routing problem considers:
@@ -223,15 +100,20 @@ The routing problem considers:
 - Traffic incidents
 - Road blockages
 
-Q-ROUTE evaluates different optimization strategies to search for high-quality fleet-wide routes.
+Q-ROUTE evaluates multiple optimization strategies to search for high-quality fleet-wide routing solutions.
 
-The main optimization approaches implemented in the project are:
+### Core Optimization Approaches
 
-1. Dijkstra
-2. Particle Swarm Optimization (PSO)
-3. Quantum Particle Swarm Optimization (QPSO)
-4. Warm-QPSO
-5. Decomposed Warm-QPSO
+| Algorithm | Purpose |
+|---|---|
+| Dijkstra | Classical shortest-path baseline |
+| PSO | Particle Swarm Optimization |
+| QPSO | Quantum Particle Swarm Optimization |
+| Warm-QPSO | PSO warm-started QPSO |
+| Decomposed Warm-QPSO | Scalable hybrid optimization |
+| Global Boundary Repair | Post-merge global route improvement |
+
+The project also includes a systematic benchmarking framework for comparing algorithms under identical experimental conditions.
 
 ---
 
@@ -246,17 +128,19 @@ Urban transportation systems face increasing challenges due to:
 - Fleet management complexity
 - Road incidents
 - Dynamic travel times
-- Infrastructure constraints
+- Road blockages
+- Vehicle capacity constraints
+- Large routing search spaces
 
-Traditional shortest-path algorithms are useful for finding a route between two points, but they do not directly solve the more complex fleet-level problem:
+Traditional shortest-path algorithms are useful for finding a route between two points, but they do not directly solve the larger fleet-level problem:
 
 > **How can multiple vehicles serve multiple customers efficiently while satisfying vehicle constraints and minimizing transportation cost under changing traffic conditions?**
 
 This is a **Vehicle Routing Problem (VRP)**.
 
-For large instances, the number of possible routing configurations becomes extremely large.
+For large instances, the number of possible routing configurations grows extremely quickly.
 
-Therefore, exhaustive search can become computationally expensive.
+Exhaustively checking every possible solution can therefore become computationally impractical.
 
 Q-ROUTE investigates metaheuristic and quantum-inspired optimization strategies to efficiently search this large solution space.
 
